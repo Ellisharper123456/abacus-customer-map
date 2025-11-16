@@ -638,6 +638,14 @@ function renderInstallations() {
                 `}
             </div>
         `);
+        
+        // On mobile, open full modal instead of popup
+        marker.on('click', function(e) {
+            if (window.innerWidth <= 768) {
+                e.target.closePopup();
+                showDetail(installation.id);
+            }
+        });
     });
     
     // Add gallery cards (limited to closest 6 for non-admin)
