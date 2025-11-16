@@ -16,7 +16,7 @@ const firebaseConfig = {
 
 // Google Sheets Configuration
 // REPLACE THIS with your Google Apps Script web app URL
-const GOOGLE_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbxmZj8zGgSbJclnm3JI2kQM5QYiiEsQbl3BX8hckJYWpwJbMFAyalNCm6hb7gGqLro/exec';
+const GOOGLE_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbwEdAiHOUoQm2uAHeYgXrUP-L7HpH_MNG5ycfOkqd-p4LFLJAuSV283He-zO6GuNi4/exec';
 
 // Initialize Firebase
 let db = null;
@@ -1046,3 +1046,4 @@ window.exportData = exportData;
     installations = await loadInstallationsFromFirebase();
     renderInstallations();
 })();
+
