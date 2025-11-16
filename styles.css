@@ -590,8 +590,83 @@ body {
     }
 
     #map {
-        height: 400px;
+        height: 500px;
         border-width: 2px;
+        border-radius: 0;
+        margin: 0 -1rem;
+        width: calc(100% + 2rem);
+    }
+    
+    .main-content {
+        gap: 1rem;
+    }
+    
+    /* Fix Leaflet popup on mobile */
+    .leaflet-popup {
+        margin-bottom: 40px !important;
+    }
+    
+    .leaflet-popup-content-wrapper {
+        max-height: 70vh !important;
+        overflow-y: auto !important;
+        border-radius: 8px !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
+    }
+    
+    .leaflet-popup-content {
+        margin: 0.75rem !important;
+        min-width: 260px !important;
+        max-width: 300px !important;
+        font-size: 0.9rem !important;
+    }
+    
+    .leaflet-popup-tip {
+        display: none !important;
+    }
+    
+    .popup-content h3 {
+        font-size: 1.05rem !important;
+        margin-bottom: 0.6rem !important;
+        color: #2d3748 !important;
+        font-weight: 600 !important;
+    }
+    
+    .popup-content p {
+        font-size: 0.85rem !important;
+        margin: 0.4rem 0 !important;
+        line-height: 1.4 !important;
+    }
+    
+    .popup-content button {
+        width: 100% !important;
+        margin: 0.4rem 0 !important;
+        padding: 0.7rem !important;
+        font-size: 0.9rem !important;
+        font-weight: 600 !important;
+        border-radius: 6px !important;
+    }
+    
+    .enquiry-section {
+        margin-top: 0.75rem !important;
+        padding-top: 0.75rem !important;
+    }
+    
+    .enquiry-section h4 {
+        font-size: 0.95rem !important;
+        margin-bottom: 0.5rem !important;
+    }
+    
+    .enquiry-buttons {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 0.5rem !important;
+        margin-top: 0.6rem !important;
+    }
+    
+    .enquiry-buttons button {
+        flex: none !important;
+        width: 100% !important;
+        padding: 0.7rem !important;
     }
 
     .gallery {
@@ -609,15 +684,125 @@ body {
 
     .modal.active {
         padding: 1rem;
+        align-items: center;
+        justify-content: center;
     }
 
     .modal-content {
-        padding: 1.5rem;
+        padding: 1rem;
         max-height: 85vh;
+        height: auto;
+        width: calc(100% - 2rem);
+        margin: auto;
+        border-radius: 12px;
+        overflow-y: auto;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+    
+    .detail-modal .modal-content {
+        padding: 1rem;
+        padding-top: 3rem;
+    }
+    
+    .modal-close {
+        position: absolute;
+        top: 0.75rem;
+        right: 0.75rem;
+        width: 36px;
+        height: 36px;
+        font-size: 1.3rem;
+        z-index: 10;
+        background: #e53e3e;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+    
+    .modal-close:hover {
+        background: #c53030;
+    }
+    
+    .form-group {
+        margin-bottom: 1rem;
+    }
+    
+    .form-group label {
+        font-size: 0.9rem;
+        margin-bottom: 0.4rem;
+    }
+    
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        font-size: 16px; /* Prevents zoom on iOS */
+        padding: 0.6rem;
+    }
+    
+    .form-group textarea {
+        min-height: 60px;
+    }
+    
+    .modal h2 {
+        font-size: 1.3rem;
+        margin-bottom: 1rem;
+        padding-right: 2rem;
+    }
+    
+    .btn {
+        width: 100%;
+        padding: 0.7rem;
+        font-size: 0.95rem;
+    }
+    
+    .image-preview {
+        gap: 0.5rem;
+    }
+    
+    .preview-item {
+        width: 80px;
+        height: 80px;
     }
     
     .detail-images {
         grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
+    
+    .detail-images img {
+        height: 250px;
+        border-radius: 8px;
+    }
+    
+    .detail-info {
+        margin: 1rem 0;
+    }
+    
+    .detail-info h3 {
+        font-size: 1.4rem;
+        margin-bottom: 0.75rem;
+    }
+    
+    .detail-info p {
+        font-size: 0.95rem;
+        line-height: 1.6;
+        margin-bottom: 0.75rem;
+    }
+    
+    .enquiry-section {
+        background: #f7fafc;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-top: 1.5rem;
+    }
+    
+    .enquiry-section h4 {
+        font-size: 1.1rem;
+        color: #2d3748;
+        margin-bottom: 0.75rem;
+    }
+    
+    .enquiry-buttons button {
+        padding: 1rem;
+        font-size: 1rem;
+        font-weight: 600;
     }
     
     .distance-calculator {
@@ -694,14 +879,6 @@ body {
         .admin-mode .header {
             margin-top: 60px;
         }
-    }
-    
-    .enquiry-buttons {
-        flex-direction: column;
-    }
-    
-    .popup-content {
-        min-width: 250px;
     }
 }
 
