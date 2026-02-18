@@ -20,9 +20,11 @@ const GOOGLE_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbwEdAiHOUoQm2
 
 // Initialize Firebase
 let db = null;
+let storage = null;
 try {
     firebase.initializeApp(firebaseConfig);
     db = firebase.firestore();
+    storage = firebase.storage();
 } catch (error) {
     console.error('Firebase initialization error:', error);
     alert('Database connection failed. Using local storage only.');
@@ -312,7 +314,11 @@ async function findNearbyInstallations() {
 // Save installations to localStorage
 function saveInstallations() {
     try {
-        const jsonData = JSON.stringify(installations);
+        const safeInstallations = installations.map(install => ({
+            ...install,
+            images: []
+        }));
+        const jsonData = JSON.stringify(safeInstallations);
         localStorage.setItem(STORAGE_KEY, jsonData);
     } catch (error) {
         if (error.name === 'QuotaExceededError') {
@@ -511,6 +517,7 @@ async function handleSubmit(event) {
                 return;
             }
             const existing = installations[existingIndex];
+            const preparedImages = await prepareImagesForSave(existing.id || editingInstallationId);
             installation = {
                 ...existing,
                 customerName,
@@ -521,14 +528,16 @@ async function handleSubmit(event) {
                 productInstalled: brandsInstalled.join(', '),
                 installYear,
                 description,
-                images: currentImages.length > 0 ? [...currentImages] : (existing.images || []),
+                images: preparedImages,
                 coordinates: coords,
                 updatedAt: new Date().toISOString()
             };
             installations[existingIndex] = installation;
         } else {
+            const newId = Date.now();
+            const preparedImages = await prepareImagesForSave(newId);
             installation = {
-                id: Date.now(),
+                id: newId,
                 customerName,
                 postcode,
                 address: fullAddress,
@@ -537,7 +546,7 @@ async function handleSubmit(event) {
                 productInstalled: brandsInstalled.join(', '),
                 installYear,
                 description,
-                images: [...currentImages],
+                images: preparedImages,
                 coordinates: coords,
                 createdAt: new Date().toISOString()
             };
@@ -824,6 +833,24 @@ function resetInstallationForm() {
     if (modalTitle) modalTitle.textContent = 'Add New Installation';
     const submitBtn = document.getElementById('submitInstallationBtn');
     if (submitBtn) submitBtn.textContent = 'Add Installation';
+}
+
+async function prepareImagesForSave(installId) {
+    if (!storage) {
+        return [...currentImages];
+    }
+
+    const uploads = currentImages.map(async (img, index) => {
+        if (typeof img === 'string' && img.startsWith('data:image')) {
+            const fileRef = storage.ref().child(`installations/${installId}/image_${Date.now()}_${index}.jpg`);
+            await fileRef.putString(img, 'data_url');
+            return await fileRef.getDownloadURL();
+        }
+        return img;
+    });
+
+    const results = await Promise.all(uploads);
+    return results.filter(Boolean);
 }
 
 function renderImagePreviewFromCurrentImages() {
