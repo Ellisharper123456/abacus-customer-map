@@ -62,7 +62,7 @@
     <div id="addModal" class="modal">
         <div class="modal-content">
             <button class="modal-close" onclick="closeAddModal()">×</button>
-            <h2>Add New Installation</h2>
+            <h2 id="modalTitle">Add New Installation</h2>
             <form id="installationForm" onsubmit="handleSubmit(event)">
                 <div class="form-group">
                     <label for="customerName">Customer Name *</label>
@@ -72,12 +72,6 @@
                 <div class="form-group">
                     <label for="postcode">Postcode *</label>
                     <input type="text" id="postcode" required placeholder="e.g., L7 1AA" style="text-transform: uppercase;">
-                </div>
-
-                <div class="form-group">
-                    <label for="address">Full Address *</label>
-                    <input type="text" id="address" required placeholder="e.g., 123 High Street, Liverpool">
-                    <p style="color: #718096; font-size: 0.85rem; margin-top: 0.5rem;">Enter the street address (postcode will be added automatically)</p>
                 </div>
 
                 <div class="form-group">
@@ -103,86 +97,54 @@
                 </div>
 
                 <div class="form-group">
-                    <label>Products Installed *</label>
-                    <div id="productSelector" style="border: 2px solid #e2e8f0; border-radius: 6px; padding: 1rem; background: #f7fafc;">
-                        <!-- Solar Panels -->
-                        <div style="margin-bottom: 1rem;">
-                            <label style="display: block; font-weight: 600; color: #2d3748; margin-bottom: 0.5rem;">☀️ Solar Panels</label>
-                            <div style="display: flex; gap: 0.5rem; align-items: center;">
-                                <input type="number" id="solarPanelQty" min="0" placeholder="Quantity" style="width: 100px; padding: 0.5rem;">
-                                <span>×</span>
-                                <input type="number" id="solarPanelWatt" min="0" placeholder="Watts (e.g. 400)" style="width: 150px; padding: 0.5rem;">
-                                <span>W Panels</span>
-                            </div>
-                        </div>
-                        
-                        <!-- Battery Storage -->
-                        <div style="margin-bottom: 1rem;">
-                            <label style="display: block; font-weight: 600; color: #2d3748; margin-bottom: 0.5rem;">🔋 Battery Storage</label>
-                            <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
-                                <input type="number" id="batteryKwh" min="0" step="0.01" placeholder="kWh (e.g. 10.36)" style="width: 150px; padding: 0.5rem;">
-                                <span>kWh</span>
-                                <select id="batteryBrand" style="padding: 0.5rem; border: 2px solid #e2e8f0; border-radius: 6px;">
-                                    <option value="">Select Brand</option>
-                                    <option value="Fox">Fox</option>
-                                    <option value="GivEnergy">GivEnergy</option>
-                                    <option value="Tesla">Tesla</option>
-                                    <option value="SolarEdge">SolarEdge</option>
-                                    <option value="Other">Other</option>
-                                </select>
-                                <input type="text" id="batteryOther" placeholder="Other brand" style="width: 150px; padding: 0.5rem; display: none;">
-                            </div>
-                        </div>
-                        
-                        <!-- Heat Pump -->
-                        <div style="margin-bottom: 1rem;">
-                            <label style="display: block; font-weight: 600; color: #2d3748; margin-bottom: 0.5rem;">🔥 Heat Pump</label>
-                            <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
-                                <input type="number" id="heatPumpKw" min="0" step="0.1" placeholder="kW (e.g. 10)" style="width: 120px; padding: 0.5rem;">
-                                <span>kW</span>
-                                <select id="heatPumpBrand" style="padding: 0.5rem; border: 2px solid #e2e8f0; border-radius: 6px;">
-                                    <option value="">Select Brand</option>
-                                    <option value="Nibe">Nibe</option>
-                                    <option value="Mitsubishi">Mitsubishi</option>
-                                    <option value="Daikin">Daikin</option>
-                                    <option value="Vaillant">Vaillant</option>
-                                    <option value="Samsung">Samsung</option>
-                                    <option value="Other">Other</option>
-                                </select>
-                                <input type="text" id="heatPumpOther" placeholder="Other brand" style="width: 150px; padding: 0.5rem; display: none;">
-                                <select id="heatPumpType" style="padding: 0.5rem; border: 2px solid #e2e8f0; border-radius: 6px;">
-                                    <option value="">Type</option>
-                                    <option value="Air Source">Air Source</option>
-                                    <option value="Ground Source">Ground Source</option>
-                                </select>
-                            </div>
-                        </div>
-                        
-                        <!-- EV Charger -->
-                        <div style="margin-bottom: 1rem;">
-                            <label style="display: block; font-weight: 600; color: #2d3748; margin-bottom: 0.5rem;">⚡ EV Charger</label>
-                            <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
-                                <input type="number" id="evChargerKw" min="0" step="0.1" placeholder="kW (e.g. 7.4)" style="width: 120px; padding: 0.5rem;">
-                                <span>kW</span>
-                                <select id="evChargerBrand" style="padding: 0.5rem; border: 2px solid #e2e8f0; border-radius: 6px;">
-                                    <option value="">Select Brand</option>
-                                    <option value="Zappi">Zappi</option>
-                                    <option value="Ohme">Ohme</option>
-                                    <option value="PodPoint">PodPoint</option>
-                                    <option value="Andersen">Andersen</option>
-                                    <option value="Other">Other</option>
-                                </select>
-                                <input type="text" id="evChargerOther" placeholder="Other brand" style="width: 150px; padding: 0.5rem; display: none;">
-                            </div>
-                        </div>
+                    <label>Brands Installed * (Select all that apply)</label>
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem; margin-top: 0.5rem;">
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                            <input type="checkbox" name="brand" value="LG" style="width: auto;">
+                            <span>LG</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                            <input type="checkbox" name="brand" value="Mitsubishi" style="width: auto;">
+                            <span>Mitsubishi</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                            <input type="checkbox" name="brand" value="Nibe" style="width: auto;">
+                            <span>Nibe</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                            <input type="checkbox" name="brand" value="Ebac" style="width: auto;">
+                            <span>Ebac</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                            <input type="checkbox" name="brand" value="GivEnergy" style="width: auto;">
+                            <span>GivEnergy</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                            <input type="checkbox" name="brand" value="Tesla" style="width: auto;">
+                            <span>Tesla</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                            <input type="checkbox" name="brand" value="Fox ESS" style="width: auto;">
+                            <span>Fox ESS</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                            <input type="checkbox" name="brand" value="Aiko" style="width: auto;">
+                            <span>Aiko</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                            <input type="checkbox" name="brand" value="Longi" style="width: auto;">
+                            <span>Longi</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                            <input type="checkbox" name="brand" value="MyEnergi" style="width: auto;">
+                            <span>MyEnergi</span>
+                        </label>
                     </div>
-                    <input type="hidden" id="productInstalled" required>
-                    <p style="color: #718096; font-size: 0.85rem; margin-top: 0.5rem;">Fill in the products that were installed. The system will generate a summary.</p>
                 </div>
 
                 <div class="form-group">
-                    <label for="installDate">Installation Date</label>
-                    <input type="date" id="installDate">
+                    <label for="installYear">Installation Year</label>
+                    <input type="number" id="installYear" min="1990" placeholder="e.g., 2024">
                 </div>
 
                 <div class="form-group">
@@ -196,7 +158,7 @@
                     <div id="imagePreview" class="image-preview"></div>
                 </div>
 
-                <button type="submit" class="btn btn-primary" style="width: 100%;">Add Installation</button>
+                <button id="submitInstallationBtn" type="submit" class="btn btn-primary" style="width: 100%;">Add Installation</button>
             </form>
         </div>
     </div>
