@@ -37,6 +37,7 @@ let installations = [];
 let isAdminMode = false;
 let activeFilters = ['all']; // Array to support multiple filters
 let userLocation = null;
+let editingInstallationId = null;
 
 // Privacy settings
 const PRIVACY_RADIUS_KM = 0.5; // Show approximate location within 500m
@@ -202,8 +203,8 @@ function getPrivateAddress(address) {
 }
 
 // Calculate distance between two coordinates (Haversine formula)
-function calculateDistance(lat1, lon1, lat2, lon2) {
-    const R = 6371; // Earth's radius in km
+function calculateDistanceMiles(lat1, lon1, lat2, lon2) {
+    const R = 3958.8; // Earth's radius in miles
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLon = (lon2 - lon1) * Math.PI / 180;
     const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
@@ -211,6 +212,10 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
               Math.sin(dLon/2) * Math.sin(dLon/2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     return R * c;
+}
+
+function normalizePostcode(postcode) {
+    return (postcode || '').toUpperCase().replace(/\s+/g, '');
 }
 
 // Find nearby installations
@@ -240,13 +245,42 @@ async function findNearbyInstallations() {
         
         userLocation = coords;
     
-        // Calculate distances and sort
-        installations.forEach(install => {
-            install.distance = calculateDistance(
-                coords.lat, coords.lng,
-                install.coordinates.lat, install.coordinates.lng
-            );
-        });
+        // Calculate distances and sort (based on postcode coordinates)
+        const updatedInstallations = [];
+        const normalizedSearchPostcode = normalizePostcode(postcode);
+        for (const install of installations) {
+            if (!isValidCoordinates(install.coordinates)) {
+                const installPostcode = getInstallationPostcode(install);
+                if (installPostcode) {
+                    const installCoords = await geocodeAddress(installPostcode);
+                    if (installCoords) {
+                        install.coordinates = installCoords;
+                        install.updatedAt = new Date().toISOString();
+                        updatedInstallations.push(install);
+                    }
+                }
+            }
+
+            const installPostcodeNormalized = normalizePostcode(getInstallationPostcode(install));
+            if (normalizedSearchPostcode && installPostcodeNormalized && normalizedSearchPostcode === installPostcodeNormalized) {
+                install.distance = 0;
+                install.exactPostcodeMatch = true;
+            } else if (isValidCoordinates(install.coordinates)) {
+                install.distance = calculateDistanceMiles(
+                    coords.lat, coords.lng,
+                    install.coordinates.lat, install.coordinates.lng
+                );
+                install.exactPostcodeMatch = false;
+            } else {
+                install.distance = Infinity;
+                install.exactPostcodeMatch = false;
+            }
+        }
+
+        if (updatedInstallations.length > 0) {
+            saveInstallations();
+            await Promise.all(updatedInstallations.map(install => saveInstallationToFirebase(install)));
+        }
         
         // Zoom to user location
         map.setView([coords.lat, coords.lng], 11);
@@ -442,10 +476,9 @@ async function handleSubmit(event) {
     
     const customerName = document.getElementById('customerName').value;
     const postcode = document.getElementById('postcode').value.trim().toUpperCase();
-    const streetAddress = document.getElementById('address').value.trim();
     
-    // Combine address with postcode
-    const fullAddress = `${streetAddress}, ${postcode}`;
+    // Use postcode only for geocoding and storage
+    const fullAddress = postcode;
     
     // Get selected technologies
     const technologyCheckboxes = document.querySelectorAll('input[name="technology"]:checked');
@@ -456,14 +489,15 @@ async function handleSubmit(event) {
         return;
     }
     
-    // Generate product summary from selector
-    const productInstalled = generateProductSummary();
-    if (!productInstalled) {
-        alert('Please fill in at least one product in the Products Installed section');
+    // Get selected brands
+    const brandsInstalled = getSelectedBrands();
+    if (brandsInstalled.length === 0) {
+        alert('Please select at least one installed brand');
         return;
     }
     
-    const installDate = document.getElementById('installDate').value;
+    const installYearInput = document.getElementById('installYear').value;
+    const installYear = installYearInput ? String(parseInt(installYearInput, 10)) : String(new Date().getFullYear());
     const description = document.getElementById('description').value;
 
     // Show loading state
@@ -473,56 +507,65 @@ async function handleSubmit(event) {
     submitBtn.disabled = true;
 
     try {
-        // Geocode using the full address with postcode
+        const isEditing = Boolean(editingInstallationId);
+        // Geocode using the postcode only
         const coords = await geocodeAddress(fullAddress);
         
         if (!coords) {
-            alert('Could not find the address. Please check the postcode and address are correct.');
+            alert('Could not find the postcode. Please check it is correct.');
             submitBtn.textContent = originalText;
             submitBtn.disabled = false;
             return;
         }
-
-        // Create installation object with full address including postcode
-        const installation = {
-            id: Date.now(),
-            customerName,
-            address: fullAddress,
-            technologyTypes: technologyTypes,
-            productInstalled,
-            installDate: installDate || new Date().toISOString().split('T')[0],
-            description,
-            images: [...currentImages],
-            coordinates: coords,
-            createdAt: new Date().toISOString()
-        };
+        let installation = null;
+        if (editingInstallationId) {
+            const existingIndex = installations.findIndex(i => String(i.id) === String(editingInstallationId));
+            if (existingIndex === -1) {
+                alert('Installation not found. Please try again.');
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+                return;
+            }
+            const existing = installations[existingIndex];
+            installation = {
+                ...existing,
+                customerName,
+                postcode,
+                address: fullAddress,
+                technologyTypes,
+                brandsInstalled,
+                productInstalled: brandsInstalled.join(', '),
+                installYear,
+                description,
+                images: currentImages.length > 0 ? [...currentImages] : (existing.images || []),
+                coordinates: coords,
+                updatedAt: new Date().toISOString()
+            };
+            installations[existingIndex] = installation;
+        } else {
+            installation = {
+                id: Date.now(),
+                customerName,
+                postcode,
+                address: fullAddress,
+                technologyTypes: technologyTypes,
+                brandsInstalled,
+                productInstalled: brandsInstalled.join(', '),
+                installYear,
+                description,
+                images: [...currentImages],
+                coordinates: coords,
+                createdAt: new Date().toISOString()
+            };
+            installations.push(installation);
+        }
         
-        // Add to installations array
-        installations.push(installation);
         saveInstallations();
-        
-        // Save to Firebase
         await saveInstallationToFirebase(installation);
 
         // Reset form
-        document.getElementById('installationForm').reset();
-        document.querySelectorAll('input[name="technology"]').forEach(cb => cb.checked = false);
-        document.getElementById('imagePreview').innerHTML = '';
-        currentImages = [];
-        
-        // Reset product selector fields
-        document.getElementById('solarPanelQty').value = '';
-        document.getElementById('solarPanelWatt').value = '';
-        document.getElementById('batteryKwh').value = '';
-        document.getElementById('batteryBrand').value = '';
-        document.getElementById('batteryOther').style.display = 'none';
-        document.getElementById('heatPumpKw').value = '';
-        document.getElementById('heatPumpBrand').value = '';
-        document.getElementById('heatPumpOther').style.display = 'none';
-        document.getElementById('heatPumpType').value = '';
-        document.getElementById('evChargerKw').value = '';
-        document.getElementById('evChargerBrand').value = '';
-        document.getElementById('evChargerOther').style.display = 'none';
+        resetInstallationForm();
+        editingInstallationId = null;
 
         // Close modal and refresh display
         closeAddModal();
@@ -531,7 +574,7 @@ async function handleSubmit(event) {
         submitBtn.textContent = originalText;
         submitBtn.disabled = false;
         
-        alert('Installation added successfully!');
+        alert(isEditing ? 'Installation updated successfully!' : 'Installation added successfully!');
     } catch (error) {
         alert('An error occurred while adding the installation. Please try again.');
         submitBtn.textContent = originalText;
@@ -591,7 +634,9 @@ function renderInstallations() {
     
     // Sort by distance if user location is set (BEFORE slicing for gallery)
     if (userLocation) {
-        filteredInstallations.sort((a, b) => (a.distance || Infinity) - (b.distance || Infinity));
+        filteredInstallations.sort((a, b) => (
+            (Number.isFinite(a.distance) ? a.distance : Infinity) - (Number.isFinite(b.distance) ? b.distance : Infinity)
+        ));
     }
     
     // For non-admin users, only show closest 6 installations in gallery (after sorting)
@@ -606,8 +651,8 @@ function renderInstallations() {
         const marker = L.marker([privateCoords.lat, privateCoords.lng])
             .addTo(map);
         
-        const distanceBadge = installation.distance ? 
-            `<span class="distance-badge">${installation.distance.toFixed(1)} km away</span>` : '';
+        const distanceBadge = Number.isFinite(installation.distance) ? 
+            `<span class="distance-badge">${formatDistanceBadge(installation)}</span>` : '';
         
         let installTechs = installation.technologyTypes || (installation.technologyType ? [installation.technologyType] : ['solar']);
         let installTechLabels = installTechs.map(t => getTechnologyLabel(t)).join(', ');
@@ -622,7 +667,7 @@ function renderInstallations() {
                 ${popupImageHtml}
                 <h3>${isAdminMode ? installation.customerName : privateAddress}${distanceBadge}</h3>
                 <p><strong>Technology:</strong> ${installTechLabels}</p>
-                <p><strong>Product:</strong> ${installation.productInstalled}</p>
+                <p><strong>Brands Installed:</strong> ${getInstallationBrandsText(installation)}</p>
                 ${!isAdminMode ? `
                     <button onclick="showDetail('${installation.id}')" style="background: #2E4591; color: white; padding: 0.75rem 1rem; border: none; border-radius: 6px; cursor: pointer; width: 100%; margin: 0.5rem 0; font-size: 1rem;">View Photos & Details</button>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
@@ -630,9 +675,10 @@ function renderInstallations() {
                         <button onclick="requestCallback('${installation.id}', 'visit')" style="background: #2E4591; color: white; padding: 0.75rem 0.5rem; border: none; border-radius: 6px; cursor: pointer; font-size: 0.9rem;">🏠 Request Visit</button>
                     </div>
                 ` : `
-                    <p><strong>Installed:</strong> ${formatDateBritish(installation.installDate)}</p>
+                    <p><strong>Installation Year:</strong> ${getInstallationYear(installation)}</p>
                     <div class="admin-actions">
                         <button onclick="showDetail('${installation.id}')" style="background: #2E4591; color: white; padding: 0.5rem 1rem; border: none; border-radius: 4px; cursor: pointer;">View Details</button>
+                        <button onclick="openEditModal('${installation.id}')" style="background: #00ABED; color: white; padding: 0.5rem 1rem; border: none; border-radius: 4px; cursor: pointer;">Edit</button>
                         <button onclick="deleteInstallation('${installation.id}')" class="btn-delete" style="flex: 0.5; margin-top: 0;">🗑️ Delete</button>
                     </div>
                 `}
@@ -664,8 +710,8 @@ function renderInstallations() {
                  </svg>
                </div>`;
 
-        const distanceText = installation.distance ? 
-            `<p><strong>Distance:</strong> <span class="distance-badge" style="margin-left:0;">${installation.distance.toFixed(1)} km</span></p>` : '';
+        const distanceText = Number.isFinite(installation.distance) ? 
+            `<p><strong>Distance:</strong> <span class="distance-badge" style="margin-left:0;">${formatDistanceBadge(installation, true)}</span></p>` : '';
         
         let cardTechs = installation.technologyTypes || (installation.technologyType ? [installation.technologyType] : ['solar']);
         let cardTechLabels = cardTechs.map(t => getTechnologyLabel(t)).join(', ');
@@ -675,11 +721,12 @@ function renderInstallations() {
             <div class="card-content">
                 <h3>${privateAddress}</h3>
                 <p><strong>Technology:</strong> ${cardTechLabels}</p>
-                <p><strong>Products:</strong> ${installation.productInstalled}</p>
+                <p><strong>Brands Installed:</strong> ${getInstallationBrandsText(installation)}</p>
                 ${distanceText}
                 ${isAdminMode ? `
                     <p><strong>Customer:</strong> ${installation.customerName}</p>
-                    <p><strong>Date:</strong> ${formatDateBritish(installation.installDate)}</p>
+                    <p><strong>Installation Year:</strong> ${getInstallationYear(installation)}</p>
+                    <button class="btn" style="background: #00ABED; color: white; margin-top: 0.5rem; width: 100%;" onclick="event.stopPropagation(); openEditModal('${installation.id}')">✏️ Edit Installation</button>
                     <button class="btn-delete" onclick="event.stopPropagation(); deleteInstallation(${installation.id})">🗑️ Delete Installation</button>
                 ` : ''}
             </div>
@@ -728,6 +775,85 @@ function formatDateBritish(dateString) {
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const year = date.getFullYear();
     return `${day}/${month}/${year}`;
+}
+
+function isValidCoordinates(coords) {
+    return coords && typeof coords.lat === 'number' && typeof coords.lng === 'number' && !Number.isNaN(coords.lat) && !Number.isNaN(coords.lng);
+}
+
+function getInstallationPostcode(installation) {
+    if (!installation) return '';
+    if (installation.postcode) return installation.postcode;
+    return extractPostcodeFromAddress(installation.address || '');
+}
+
+function formatDistanceBadge(installation, compact = false) {
+    if (!Number.isFinite(installation.distance)) return '';
+    if (installation.exactPostcodeMatch) {
+        return compact ? '0 m' : '0 m away';
+    }
+    const miles = installation.distance.toFixed(1);
+    return compact ? `${miles} mi` : `${miles} mi away`;
+}
+
+function getInstallationYear(installation) {
+    if (installation.installYear) return installation.installYear;
+    if (installation.installDate) {
+        const date = new Date(installation.installDate);
+        return String(date.getFullYear());
+    }
+    return '';
+}
+
+function getInstallationBrandsText(installation) {
+    const brands = installation.brandsInstalled ?? installation.productInstalled ?? '';
+    if (Array.isArray(brands)) return brands.join(', ');
+    return brands;
+}
+
+function getSelectedBrands() {
+    const brandCheckboxes = document.querySelectorAll('input[name="brand"]:checked');
+    const brands = Array.from(brandCheckboxes).map(cb => cb.value);
+    const otherBrandInput = document.getElementById('brandOther');
+    if (otherBrandInput && otherBrandInput.value.trim()) {
+        brands.push(otherBrandInput.value.trim());
+    }
+    return brands;
+}
+
+function extractPostcodeFromAddress(address) {
+    if (!address) return '';
+    const match = address.match(/([A-Z]{1,2}\d{1,2}[A-Z]?)\s*\d[A-Z]{2}/i);
+    if (match) return match[0].toUpperCase();
+    return address.trim().toUpperCase();
+}
+
+function resetInstallationForm() {
+    document.getElementById('installationForm').reset();
+    document.querySelectorAll('input[name="technology"]').forEach(cb => cb.checked = false);
+    document.querySelectorAll('input[name="brand"]').forEach(cb => cb.checked = false);
+    const otherBrandInput = document.getElementById('brandOther');
+    if (otherBrandInput) otherBrandInput.value = '';
+    document.getElementById('imagePreview').innerHTML = '';
+    currentImages = [];
+    const modalTitle = document.getElementById('modalTitle');
+    if (modalTitle) modalTitle.textContent = 'Add New Installation';
+    const submitBtn = document.getElementById('submitInstallationBtn');
+    if (submitBtn) submitBtn.textContent = 'Add Installation';
+}
+
+function renderImagePreviewFromCurrentImages() {
+    const previewContainer = document.getElementById('imagePreview');
+    previewContainer.innerHTML = '';
+    currentImages.forEach((img, i) => {
+        const previewItem = document.createElement('div');
+        previewItem.className = 'preview-item';
+        previewItem.innerHTML = `
+            <img src="${img}" alt="Preview">
+            <button type="button" onclick="removeImage(${i})">×</button>
+        `;
+        previewContainer.appendChild(previewItem);
+    });
 }
 
 // Request callback/visit
@@ -804,7 +930,7 @@ async function submitEnquiry(event, installId, type) {
         installationAddress: installation.address,
         installationCustomer: installation.customerName,
         technologies: installation.technologyTypes || [installation.technologyType],
-        product: installation.productInstalled,
+        product: getInstallationBrandsText(installation),
         timestamp: new Date().toISOString(),
         submittedAt: new Date().toLocaleString('en-GB', { 
             day: '2-digit', 
@@ -896,8 +1022,8 @@ function showDetail(id) {
     const detailTechLabels = detailTechs.map(t => getTechnologyLabel(t)).join(', ');
     
     const privateAddress = getPrivateAddress(installation.address);
-    const distanceBadge = installation.distance ? 
-        `<span class="distance-badge">${installation.distance.toFixed(1)} km away</span>` : '';
+    const distanceBadge = Number.isFinite(installation.distance) ? 
+        `<span class="distance-badge">${formatDistanceBadge(installation)}</span>` : '';
 
     if (isAdminMode) {
         // Admin view - show everything
@@ -905,13 +1031,16 @@ function showDetail(id) {
             <div class="detail-info">
                 <h3>${installation.customerName}</h3>
                 <p><strong>Technologies:</strong> ${detailTechLabels}</p>
-                <p><strong>Products:</strong> ${installation.productInstalled}</p>
+                <p><strong>Brands Installed:</strong> ${getInstallationBrandsText(installation)}</p>
                 <p><strong>Address:</strong> ${installation.address}</p>
-                <p><strong>Installation Date:</strong> ${formatDateBritish(installation.installDate)}</p>
+                <p><strong>Installation Year:</strong> ${getInstallationYear(installation)}</p>
                 ${installation.description ? `<p><strong>Description:</strong> ${installation.description}</p>` : ''}
             </div>
             ${imagesHtml}
-            <button class="btn-delete" onclick="deleteInstallation('${installation.id}'); closeDetailModal();">🗑️ Delete This Installation</button>
+            <div class="admin-actions">
+                <button onclick="openEditModal('${installation.id}')" style="background: #00ABED; color: white; padding: 0.5rem 1rem; border: none; border-radius: 4px; cursor: pointer;">Edit Installation</button>
+                <button class="btn-delete" style="margin-top: 0; width: auto;" onclick="deleteInstallation('${installation.id}'); closeDetailModal();">🗑️ Delete This Installation</button>
+            </div>
         `;
     } else {
         // Public view - hide customer details
@@ -919,7 +1048,7 @@ function showDetail(id) {
             <div class="detail-info">
                 <h3>${privateAddress} ${distanceBadge}</h3>
                 <p><strong>Technologies:</strong> ${detailTechLabels}</p>
-                <p><strong>Products Installed:</strong> ${installation.productInstalled}</p>
+                <p><strong>Brands Installed:</strong> ${getInstallationBrandsText(installation)}</p>
                 <p style="color: #718096; font-style: italic; margin-top: 1rem;">For privacy, customer details are not displayed publicly.</p>
             </div>
             ${imagesHtml}
@@ -939,11 +1068,51 @@ function showDetail(id) {
 
 // Modal controls
 function openAddModal() {
+    editingInstallationId = null;
+    resetInstallationForm();
     document.getElementById('addModal').classList.add('active');
 }
 
 function closeAddModal() {
+    editingInstallationId = null;
     document.getElementById('addModal').classList.remove('active');
+}
+
+function openEditModal(installId) {
+    const installation = installations.find(i => String(i.id) === String(installId));
+    if (!installation) return;
+
+    editingInstallationId = String(installId);
+    const modalTitle = document.getElementById('modalTitle');
+    if (modalTitle) modalTitle.textContent = 'Edit Installation';
+    const submitBtn = document.getElementById('submitInstallationBtn');
+    if (submitBtn) submitBtn.textContent = 'Save Changes';
+
+    document.getElementById('customerName').value = installation.customerName || '';
+    document.getElementById('postcode').value = getInstallationPostcode(installation);
+    document.getElementById('description').value = installation.description || '';
+    document.getElementById('installYear').value = getInstallationYear(installation);
+
+    document.querySelectorAll('input[name="technology"]').forEach(cb => {
+        cb.checked = (installation.technologyTypes || []).includes(cb.value);
+    });
+
+    const brands = installation.brandsInstalled || (installation.productInstalled ? installation.productInstalled.split(',') : []);
+    const normalizedBrands = brands.map(b => b.trim().toLowerCase());
+    document.querySelectorAll('input[name="brand"]').forEach(cb => {
+        cb.checked = normalizedBrands.includes(cb.value.toLowerCase());
+    });
+    const otherBrandInput = document.getElementById('brandOther');
+    if (otherBrandInput) {
+        const knownBrands = Array.from(document.querySelectorAll('input[name="brand"]')).map(cb => cb.value.toLowerCase());
+        const customBrands = normalizedBrands.filter(b => !knownBrands.includes(b));
+        otherBrandInput.value = customBrands.join(', ');
+    }
+
+    currentImages = installation.images ? [...installation.images] : [];
+    renderImagePreviewFromCurrentImages();
+
+    document.getElementById('addModal').classList.add('active');
 }
 
 function closeDetailModal() {
@@ -970,61 +1139,7 @@ document.getElementById('detailModal').addEventListener('click', function(e) {
     if (e.target === this) closeDetailModal();
 });
 
-// Product selector handlers - show/hide "Other" brand inputs
-document.getElementById('batteryBrand').addEventListener('change', function() {
-    document.getElementById('batteryOther').style.display = this.value === 'Other' ? 'block' : 'none';
-});
-
-document.getElementById('heatPumpBrand').addEventListener('change', function() {
-    document.getElementById('heatPumpOther').style.display = this.value === 'Other' ? 'block' : 'none';
-});
-
-document.getElementById('evChargerBrand').addEventListener('change', function() {
-    document.getElementById('evChargerOther').style.display = this.value === 'Other' ? 'block' : 'none';
-});
-
-// Generate product summary from selector
-function generateProductSummary() {
-    const products = [];
-    
-    // Solar Panels
-    const solarQty = document.getElementById('solarPanelQty').value;
-    const solarWatt = document.getElementById('solarPanelWatt').value;
-    if (solarQty && solarWatt) {
-        products.push(`${solarQty}x ${solarWatt}W Solar Panels`);
-    }
-    
-    // Battery
-    const batteryKwh = document.getElementById('batteryKwh').value;
-    const batteryBrand = document.getElementById('batteryBrand').value;
-    const batteryOther = document.getElementById('batteryOther').value;
-    if (batteryKwh) {
-        const brand = batteryBrand === 'Other' ? batteryOther : batteryBrand;
-        products.push(`${batteryKwh}kWh ${brand} Battery`);
-    }
-    
-    // Heat Pump
-    const heatPumpKw = document.getElementById('heatPumpKw').value;
-    const heatPumpBrand = document.getElementById('heatPumpBrand').value;
-    const heatPumpOther = document.getElementById('heatPumpOther').value;
-    const heatPumpType = document.getElementById('heatPumpType').value;
-    if (heatPumpKw) {
-        const brand = heatPumpBrand === 'Other' ? heatPumpOther : heatPumpBrand;
-        const type = heatPumpType ? ` ${heatPumpType}` : '';
-        products.push(`${heatPumpKw}kW ${brand}${type} Heat Pump`);
-    }
-    
-    // EV Charger
-    const evKw = document.getElementById('evChargerKw').value;
-    const evBrand = document.getElementById('evChargerBrand').value;
-    const evOther = document.getElementById('evChargerOther').value;
-    if (evKw) {
-        const brand = evBrand === 'Other' ? evOther : evBrand;
-        products.push(`${evKw}kW ${brand} EV Charger`);
-    }
-    
-    return products.join(', ');
-}
+// Brand selection handles with getSelectedBrands()
 
 // Expose functions globally so they can be called from Leaflet popup HTML
 window.showDetail = showDetail;
@@ -1033,6 +1148,7 @@ window.deleteInstallation = deleteInstallation;
 window.closeDetailModal = closeDetailModal;
 window.submitEnquiry = submitEnquiry;
 window.openAddModal = openAddModal;
+window.openEditModal = openEditModal;
 window.closeAddModal = closeAddModal;
 window.toggleAdminMode = toggleAdminMode;
 window.logoutAdmin = logoutAdmin;
@@ -1046,4 +1162,3 @@ window.exportData = exportData;
     installations = await loadInstallationsFromFirebase();
     renderInstallations();
 })();
-
