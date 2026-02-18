@@ -38,6 +38,8 @@ let isAdminMode = false;
 let activeFilters = ['all']; // Array to support multiple filters
 let userLocation = null;
 let editingInstallationId = null;
+let currentModalImages = [];
+let currentModalImageIndex = 0;
 
 // Privacy settings
 const PRIVACY_RADIUS_KM = 0.5; // Show approximate location within 500m
@@ -356,7 +358,6 @@ async function deleteInstallationFromFirebase(installId) {
 // Handle image preview with compression
 function handleImagePreview(event) {
     const files = event.target.files;
-    const previewContainer = document.getElementById('imagePreview');
     
     Array.from(files).forEach((file, index) => {
         const reader = new FileReader();
@@ -388,14 +389,7 @@ function handleImagePreview(event) {
                 // Compress to JPEG with 0.8 quality
                 const compressedData = canvas.toDataURL('image/jpeg', 0.8);
                 currentImages.push(compressedData);
-                
-                const previewItem = document.createElement('div');
-                previewItem.className = 'preview-item';
-                previewItem.innerHTML = `
-                    <img src="${compressedData}" alt="Preview">
-                    <button type="button" onclick="removeImage(${currentImages.length - 1})">×</button>
-                `;
-                previewContainer.appendChild(previewItem);
+                renderImagePreviewFromCurrentImages();
             };
             img.src = e.target.result;
         };
@@ -406,17 +400,7 @@ function handleImagePreview(event) {
 // Remove image from preview
 function removeImage(index) {
     currentImages.splice(index, 1);
-    const previewContainer = document.getElementById('imagePreview');
-    previewContainer.innerHTML = '';
-    currentImages.forEach((img, i) => {
-        const previewItem = document.createElement('div');
-        previewItem.className = 'preview-item';
-        previewItem.innerHTML = `
-            <img src="${img}" alt="Preview">
-            <button type="button" onclick="removeImage(${i})">×</button>
-        `;
-        previewContainer.appendChild(previewItem);
-    });
+    renderImagePreviewFromCurrentImages();
 }
 
 // Geocode address using Nominatim with rate limiting and timeout
@@ -848,12 +832,34 @@ function renderImagePreviewFromCurrentImages() {
     currentImages.forEach((img, i) => {
         const previewItem = document.createElement('div');
         previewItem.className = 'preview-item';
+        const moveLeftDisabled = i === 0 ? 'disabled' : '';
+        const moveRightDisabled = i === currentImages.length - 1 ? 'disabled' : '';
         previewItem.innerHTML = `
             <img src="${img}" alt="Preview">
             <button type="button" onclick="removeImage(${i})">×</button>
+            <div class="preview-reorder">
+                <button type="button" ${moveLeftDisabled} onclick="moveImageLeft(${i})">◀</button>
+                <button type="button" ${moveRightDisabled} onclick="moveImageRight(${i})">▶</button>
+            </div>
         `;
         previewContainer.appendChild(previewItem);
     });
+}
+
+function moveImageLeft(index) {
+    if (index <= 0) return;
+    const temp = currentImages[index - 1];
+    currentImages[index - 1] = currentImages[index];
+    currentImages[index] = temp;
+    renderImagePreviewFromCurrentImages();
+}
+
+function moveImageRight(index) {
+    if (index >= currentImages.length - 1) return;
+    const temp = currentImages[index + 1];
+    currentImages[index + 1] = currentImages[index];
+    currentImages[index] = temp;
+    renderImagePreviewFromCurrentImages();
 }
 
 // Request callback/visit
@@ -1012,10 +1018,10 @@ function showDetail(id) {
 
     const detailContent = document.getElementById('detailContent');
     
-    const imagesHtml = installation.images.length > 0
-        ? `<div class="detail-images">
-             ${installation.images.map(img => `<img src="${img}" alt="Installation" onclick="window.open('${img}')">`).join('')}
-           </div>`
+        const imagesHtml = installation.images.length > 0
+                ? `<div class="detail-images">
+                         ${installation.images.map((img, idx) => `<img src="${img}" alt="Installation" onclick="openImageModal('${installation.id}', ${idx})">`).join('')}
+                     </div>`
         : '<p style="color:#718096;">No images available</p>';
     
     const detailTechs = installation.technologyTypes || (installation.technologyType ? [installation.technologyType] : ['solar']);
@@ -1119,6 +1125,43 @@ function closeDetailModal() {
     document.getElementById('detailModal').classList.remove('active');
 }
 
+function openImageModal(installId, index) {
+    const modal = document.getElementById('imageModal');
+    const img = document.getElementById('imageModalImg');
+    if (!modal || !img) return;
+    const installation = installations.find(i => String(i.id) === String(installId));
+    if (!installation || !installation.images || installation.images.length === 0) return;
+
+    currentModalImages = installation.images;
+    currentModalImageIndex = Math.max(0, Math.min(index, currentModalImages.length - 1));
+    img.src = currentModalImages[currentModalImageIndex];
+    modal.classList.add('active');
+}
+
+function closeImageModal() {
+    const modal = document.getElementById('imageModal');
+    const img = document.getElementById('imageModalImg');
+    if (!modal || !img) return;
+    img.src = '';
+    modal.classList.remove('active');
+    currentModalImages = [];
+    currentModalImageIndex = 0;
+}
+
+function showPrevImage() {
+    if (!currentModalImages.length) return;
+    currentModalImageIndex = (currentModalImageIndex - 1 + currentModalImages.length) % currentModalImages.length;
+    const img = document.getElementById('imageModalImg');
+    if (img) img.src = currentModalImages[currentModalImageIndex];
+}
+
+function showNextImage() {
+    if (!currentModalImages.length) return;
+    currentModalImageIndex = (currentModalImageIndex + 1) % currentModalImages.length;
+    const img = document.getElementById('imageModalImg');
+    if (img) img.src = currentModalImages[currentModalImageIndex];
+}
+
 // Export data
 function exportData() {
     const dataStr = JSON.stringify(installations, null, 2);
@@ -1139,6 +1182,10 @@ document.getElementById('detailModal').addEventListener('click', function(e) {
     if (e.target === this) closeDetailModal();
 });
 
+document.getElementById('imageModal').addEventListener('click', function(e) {
+    if (e.target === this) closeImageModal();
+});
+
 // Brand selection handles with getSelectedBrands()
 
 // Expose functions globally so they can be called from Leaflet popup HTML
@@ -1146,6 +1193,12 @@ window.showDetail = showDetail;
 window.requestCallback = requestCallback;
 window.deleteInstallation = deleteInstallation;
 window.closeDetailModal = closeDetailModal;
+window.openImageModal = openImageModal;
+window.closeImageModal = closeImageModal;
+window.showPrevImage = showPrevImage;
+window.showNextImage = showNextImage;
+window.moveImageLeft = moveImageLeft;
+window.moveImageRight = moveImageRight;
 window.submitEnquiry = submitEnquiry;
 window.openAddModal = openAddModal;
 window.openEditModal = openEditModal;
