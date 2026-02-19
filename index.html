@@ -173,7 +173,7 @@
         </div>
     </div>
 
-    <!-- Image Modal -->
+    <!-- Image Modal
     <div id="imageModal" class="modal detail-modal">
         <div class="modal-content">
             <button class="modal-close" onclick="closeImageModal()">×</button>
@@ -183,8 +183,26 @@
                 <button class="btn btn-secondary" type="button" onclick="showNextImage()">Next →</button>
             </div>
         </div>
-    </div>
+    </div> -->
 
+
+    <!-- Image Modal -->
+    <div id="imageModal" class="modal detail-modal image-modal">
+        <div class="modal-content image-modal-content">
+            <button class="modal-close" onclick="closeImageModal()">×</button>
+            <div class="image-nav-top">
+                <button class="btn btn-secondary btn-nav" type="button" onclick="showPrevImage()">← Prev</button>
+                <span class="image-counter"><span id="currentImageNum">1</span> / <span id="totalImageNum">1</span></span>
+                <button class="btn btn-secondary btn-nav" type="button" onclick="showNextImage()">Next →</button>
+            </div>
+            <img id="imageModalImg" alt="Installation image">
+            <div class="image-nav-bottom">
+                <button class="btn btn-secondary" type="button" onclick="showPrevImage()">← Previous</button>
+                <button class="btn btn-secondary" type="button" onclick="showNextImage()">Next →</button>
+            </div>
+        </div>
+    </div>
+    
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="app.js"></script>
 </body>

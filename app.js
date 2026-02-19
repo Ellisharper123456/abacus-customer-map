@@ -835,24 +835,6 @@ function resetInstallationForm() {
     if (submitBtn) submitBtn.textContent = 'Add Installation';
 }
 
-// async function prepareImagesForSave(installId) {
-//     if (!storage) {
-//         return [...currentImages];
-//     }
-
-//     const uploads = currentImages.map(async (img, index) => {
-//         if (typeof img === 'string' && img.startsWith('data:image')) {
-//             const fileRef = storage.ref().child(`installations/${installId}/image_${Date.now()}_${index}.jpg`);
-//             await fileRef.putString(img, 'data_url');
-//             return await fileRef.getDownloadURL();
-//         }
-//         return img;
-//     });
-
-//     const results = await Promise.all(uploads);
-//     return results.filter(Boolean);
-// }
-
 async function prepareImagesForSave(installId) {
     if (!storage) {
         return [...currentImages];
@@ -865,8 +847,6 @@ async function prepareImagesForSave(installId) {
                 const response = await fetch(img);
                 const blob = await response.blob();
                 
-                // Use modular Firebase SDK syntax
-                // const { ref, uploadBytes, getDownloadURL } = storage;
                 const storageRef = storage.ref(storage, `installations/${installId}/image_${Date.now()}_${index}.jpg`);
                 const uploadTask = await storage.uploadBytes(storageRef, blob);
                 const downloadURL = await storage.getDownloadURL(uploadTask.ref);
@@ -1182,6 +1162,9 @@ function closeDetailModal() {
     document.getElementById('detailModal').classList.remove('active');
 }
 
+let touchStartX = 0;
+let touchEndX = 0;
+
 function openImageModal(installId, index) {
     const modal = document.getElementById('imageModal');
     const img = document.getElementById('imageModalImg');
@@ -1192,7 +1175,12 @@ function openImageModal(installId, index) {
     currentModalImages = installation.images;
     currentModalImageIndex = Math.max(0, Math.min(index, currentModalImages.length - 1));
     img.src = currentModalImages[currentModalImageIndex];
+    updateImageCounter();
     modal.classList.add('active');
+    
+    // Add touch listeners for swipe
+    modal.addEventListener('touchstart', handleTouchStart, false);
+    modal.addEventListener('touchend', handleTouchEnd, false);
 }
 
 function closeImageModal() {
@@ -1203,7 +1191,63 @@ function closeImageModal() {
     modal.classList.remove('active');
     currentModalImages = [];
     currentModalImageIndex = 0;
+    
+    // Remove touch listeners
+    modal.removeEventListener('touchstart', handleTouchStart);
+    modal.removeEventListener('touchend', handleTouchEnd);
 }
+
+function handleTouchStart(e) {
+    touchStartX = e.changedTouches[0].screenX;
+}
+
+function handleTouchEnd(e) {
+    touchEndX = e.changedTouches[0].screenX;
+    handleSwipe();
+}
+
+function handleSwipe() {
+    const swipeThreshold = 50;
+    if (touchStartX - touchEndX > swipeThreshold) {
+        // Swiped left - show next image
+        showNextImage();
+    } else if (touchEndX - touchStartX > swipeThreshold) {
+        // Swiped right - show previous image
+        showPrevImage();
+    }
+}
+
+function updateImageCounter() {
+    const currentNum = document.getElementById('currentImageNum');
+    const totalNum = document.getElementById('totalImageNum');
+    if (currentNum && totalNum) {
+        currentNum.textContent = currentModalImageIndex + 1;
+        totalNum.textContent = currentModalImages.length;
+    }
+}
+
+// function openImageModal(installId, index) {
+//     const modal = document.getElementById('imageModal');
+//     const img = document.getElementById('imageModalImg');
+//     if (!modal || !img) return;
+//     const installation = installations.find(i => String(i.id) === String(installId));
+//     if (!installation || !installation.images || installation.images.length === 0) return;
+
+//     currentModalImages = installation.images;
+//     currentModalImageIndex = Math.max(0, Math.min(index, currentModalImages.length - 1));
+//     img.src = currentModalImages[currentModalImageIndex];
+//     modal.classList.add('active');
+// }
+
+// function closeImageModal() {
+//     const modal = document.getElementById('imageModal');
+//     const img = document.getElementById('imageModalImg');
+//     if (!modal || !img) return;
+//     img.src = '';
+//     modal.classList.remove('active');
+//     currentModalImages = [];
+//     currentModalImageIndex = 0;
+// }
 
 function showPrevImage() {
     if (!currentModalImages.length) return;

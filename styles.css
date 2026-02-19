@@ -1020,3 +1020,77 @@ body {
         padding: 0.5rem 1rem;
     }
 }
+
+/* MOBILE DESIGN FOR IMAGE MODAL */
+
+/* Image Modal - Desktop */
+.image-modal .modal-content {
+    max-width: 900px;
+    max-height: 90vh;
+}
+
+.image-nav-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    gap: 1rem;
+}
+
+.image-counter {
+    color: white;
+    font-size: 0.9rem;
+}
+
+.image-nav-bottom {
+    display: none;
+}
+
+/* Mobile - Full Screen */
+@media (max-width: 768px) {
+    .image-modal .modal-content {
+        max-width: 100vw;
+        max-height: 100vh;
+        width: 100vw;
+        height: 100vh;
+        border-radius: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+
+    .image-modal img {
+        max-width: 100%;
+        max-height: 85vh;
+        width: 100%;
+        height: auto;
+        flex: 1;
+        object-fit: contain;
+    }
+
+    .image-nav-top {
+        display: none;
+    }
+
+    .image-nav-bottom {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 1rem;
+        background: rgba(0, 0, 0, 0.8);
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .image-nav-bottom button {
+        flex: 1;
+    }
+
+    .modal-close {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        z-index: 10;
+    }
+}
