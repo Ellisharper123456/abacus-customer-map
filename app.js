@@ -862,8 +862,8 @@ async function prepareImagesForSave(installId) {
         if (typeof img === 'string' && img.startsWith('data:image')) {
             try {
                 const fileRef = storage.ref().child(`installations/${installId}/image_${Date.now()}_${index}.jpg`);
-                const uploadTask = await fileRef.putString(img, 'data_url');
-                const downloadURL = await uploadTask.ref.getDownloadURL();
+                await fileRef.putString(img, 'data_url');
+                const downloadURL = await fileRef.getDownloadURL();
                 return downloadURL;
             } catch (error) {
                 console.error('Error uploading image:', error);
