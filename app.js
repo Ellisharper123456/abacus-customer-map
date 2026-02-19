@@ -866,10 +866,10 @@ async function prepareImagesForSave(installId) {
                 const blob = await response.blob();
                 
                 // Use modular Firebase SDK syntax
-                const { ref, uploadBytes, getDownloadURL } = storage;
-                const storageRef = ref(storage, `installations/${installId}/image_${Date.now()}_${index}.jpg`);
-                const uploadTask = await uploadBytes(storageRef, blob);
-                const downloadURL = await getDownloadURL(uploadTask.ref);
+                // const { ref, uploadBytes, getDownloadURL } = storage;
+                const storageRef = storage.ref(storage, `installations/${installId}/image_${Date.now()}_${index}.jpg`);
+                const uploadTask = await storage.uploadBytes(storageRef, blob);
+                const downloadURL = await storage.getDownloadURL(uploadTask.ref);
                 return downloadURL;
             } catch (error) {
                 console.error('Error uploading image:', error);
