@@ -173,36 +173,26 @@
         </div>
     </div>
 
-    <!-- Image Modal
-    <div id="imageModal" class="modal detail-modal">
-        <div class="modal-content">
-            <button class="modal-close" onclick="closeImageModal()">×</button>
-            <div style="display:flex; align-items:center; justify-content:center; gap:0.5rem;">
-                <button class="btn btn-secondary" type="button" onclick="showPrevImage()">← Prev</button>
-                <img id="imageModalImg" alt="Installation image" style="max-width: 100%; max-height: 70vh; border-radius: 8px;">
-                <button class="btn btn-secondary" type="button" onclick="showNextImage()">Next →</button>
-            </div>
-        </div>
-    </div> -->
-
-
-    <!-- Image Modal -->
-    <div id="imageModal" class="modal detail-modal image-modal">
-        <div class="modal-content image-modal-content">
-            <button class="modal-close" onclick="closeImageModal()">×</button>
-            <div class="image-nav-top">
-                <button class="btn btn-secondary btn-nav" type="button" onclick="showPrevImage()">← Prev</button>
-                <span class="image-counter"><span id="currentImageNum">1</span> / <span id="totalImageNum">1</span></span>
-                <button class="btn btn-secondary btn-nav" type="button" onclick="showNextImage()">Next →</button>
-            </div>
-            <img id="imageModalImg" alt="Installation image">
-            <div class="image-nav-bottom">
-                <button class="btn btn-secondary" type="button" onclick="showPrevImage()">← Previous</button>
-                <button class="btn btn-secondary" type="button" onclick="showNextImage()">Next →</button>
+<!-- Image Modal -->
+    <div id="imageModal" class="modal image-modal">
+        <div class="image-modal-content">
+            <button class="modal-close-icon" onclick="closeImageModal()">✕</button>
+            <button class="image-nav-btn image-nav-prev" type="button" onclick="showPrevImage()" aria-label="Previous image">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
+                </svg>
+            </button>
+            <img id="imageModalImg" alt="Installation image" class="image-modal-img">
+            <button class="image-nav-btn image-nav-next" type="button" onclick="showNextImage()" aria-label="Next image">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
+                </svg>
+            </button>
+            <div class="image-counter">
+                <span id="currentImageNum">1</span> / <span id="totalImageNum">1</span>
             </div>
         </div>
     </div>
-    
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="app.js"></script>
 </body>

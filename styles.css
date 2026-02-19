@@ -1022,75 +1022,207 @@ body {
 }
 
 /* MOBILE DESIGN FOR IMAGE MODAL */
-
-/* Image Modal - Desktop */
-.image-modal .modal-content {
-    max-width: 900px;
-    max-height: 90vh;
-}
-
-.image-nav-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1rem;
-    gap: 1rem;
-}
-
-.image-counter {
-    color: white;
-    font-size: 0.9rem;
-}
-
-.image-nav-bottom {
+/* ========== IMAGE MODAL - ENHANCED ========== */
+.image-modal {
+    background: rgba(0, 0, 0, 0.95) !important;
     display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
 }
 
-/* Mobile - Full Screen */
+.image-modal.active {
+    display: flex;
+}
+
+.image-modal-content {
+    position: relative;
+    width: 90%;
+    height: 90%;
+    max-width: 1000px;
+    max-height: 800px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: imageModalSlideIn 0.3s ease-out;
+}
+
+@keyframes imageModalSlideIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.image-modal-img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+
+/* Navigation Arrows */
+.image-nav-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 50px;
+    height: 50px;
+    border: none;
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+    cursor: pointer;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    z-index: 10;
+}
+
+.image-nav-btn:hover {
+    background: rgba(0, 171, 237, 0.4);
+    transform: translateY(-50%) scale(1.1);
+}
+
+.image-nav-btn:active {
+    background: rgba(0, 171, 237, 0.6);
+    transform: translateY(-50%) scale(0.95);
+}
+
+.image-nav-btn svg {
+    width: 32px;
+    height: 32px;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+.image-nav-prev {
+    left: 20px;
+}
+
+.image-nav-next {
+    right: 20px;
+}
+
+/* Close Button */
+.modal-close-icon {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 40px;
+    height: 40px;
+    border: none;
+    background: rgba(0, 171, 237, 0.3);
+    color: white;
+    cursor: pointer;
+    border-radius: 50%;
+    font-size: 24px;
+    font-weight: 300;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    z-index: 20;
+}
+
+.modal-close-icon:hover {
+    background: rgba(0, 171, 237, 0.6);
+    transform: scale(1.1);
+}
+
+.modal-close-icon:active {
+    transform: scale(0.95);
+}
+
+/* Image Counter */
+.image-counter {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(46, 69, 145, 0.8);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 24px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* ========== MOBILE RESPONSIVE ========== */
 @media (max-width: 768px) {
-    .image-modal .modal-content {
-        max-width: 100vw;
-        max-height: 100vh;
-        width: 100vw;
-        height: 100vh;
-        border-radius: 0;
-        padding: 0;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-    }
-
-    .image-modal img {
+    .image-modal-content {
+        width: 95%;
+        height: 95%;
         max-width: 100%;
-        max-height: 85vh;
-        width: 100%;
-        height: auto;
-        flex: 1;
-        object-fit: contain;
+        max-height: 100%;
     }
 
-    .image-nav-top {
-        display: none;
+    .image-modal-img {
+        border-radius: 8px;
     }
 
-    .image-nav-bottom {
-        display: flex;
-        justify-content: space-between;
-        gap: 1rem;
-        padding: 1rem;
-        background: rgba(0, 0, 0, 0.8);
-        width: 100%;
-        box-sizing: border-box;
+    .image-nav-btn {
+        width: 45px;
+        height: 45px;
     }
 
-    .image-nav-bottom button {
-        flex: 1;
+    .image-nav-btn svg {
+        width: 28px;
+        height: 28px;
     }
 
-    .modal-close {
-        position: absolute;
-        top: 1rem;
-        right: 1rem;
-        z-index: 10;
+    .image-nav-prev {
+        left: 10px;
+    }
+
+    .image-nav-next {
+        right: 10px;
+    }
+
+    .modal-close-icon {
+        width: 36px;
+        height: 36px;
+        font-size: 20px;
+        top: 15px;
+        right: 15px;
+    }
+
+    .image-counter {
+        bottom: 15px;
+        font-size: 0.85rem;
+        padding: 6px 14px;
+    }
+}
+
+/* Extra small screens */
+@media (max-width: 480px) {
+    .image-nav-btn {
+        width: 40px;
+        height: 40px;
+    }
+
+    .image-nav-btn svg {
+        width: 24px;
+        height: 24px;
+    }
+
+    .image-nav-prev {
+        left: 5px;
+    }
+
+    .image-nav-next {
+        right: 5px;
     }
 }

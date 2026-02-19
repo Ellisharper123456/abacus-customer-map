@@ -1162,7 +1162,44 @@ function closeDetailModal() {
     document.getElementById('detailModal').classList.remove('active');
 }
 
-let touchStartX = 0;
+ImageIndex - 1 + currentModalImages.length) % currentModalImages.length;
+    const img = document.getElementById('imageModalImg');
+    if (img) {
+        img.style.opacity = '0.5';
+        img.src = currentModalImages[currentModalImageIndex];
+        img.style.opacity = '1';
+    }
+    updateImageCounter();
+}
+
+function showNextImage() {
+    if (!currentModalImages.length) return;
+    currentModalImageIndex = (currentModalImageIndex + 1) % currentModalImages.length;
+    const img = document.getElementById('imageModalImg');
+    if (img) {
+        img.style.opacity = '0.5';
+        img.src = currentModalImages[currentModalImageIndex];
+        img.style.opacity = '1';
+    }
+    updateImageCounter();
+}
+
+function handleTouchStart(e) {
+    touchStartX = e.changedTouches[0].screenX;
+}
+
+function handleTouchEnd(e) {
+    touchEndX = e.changedTouches[0].screenX;
+    handleSwipe();
+}
+
+function handleSwipe() {
+    const swipeThreshold = 50;
+    if (touchStartX - touchEndX > swipeThreshold) {
+        // Swiped left - show next image
+        showNextImage();
+    } else if (touchEndX - touchStartX > swipeThreshold) {
+        // Swiped right - show previous imlet touchStartX = 0;
 let touchEndX = 0;
 
 function openImageModal(installId, index) {
@@ -1181,6 +1218,9 @@ function openImageModal(installId, index) {
     // Add touch listeners for swipe
     modal.addEventListener('touchstart', handleTouchStart, false);
     modal.addEventListener('touchend', handleTouchEnd, false);
+    
+    // Prevent body scroll when modal is open
+    document.body.style.overflow = 'hidden';
 }
 
 function closeImageModal() {
@@ -1195,6 +1235,25 @@ function closeImageModal() {
     // Remove touch listeners
     modal.removeEventListener('touchstart', handleTouchStart);
     modal.removeEventListener('touchend', handleTouchEnd);
+    
+    // Re-enable body scroll
+    document.body.style.overflow = 'auto';
+}
+
+function showPrevImage() {
+    if (!currentModalImages.length) return;
+    currentModalImageIndex = (currentModalage
+        showPrevImage();
+    }
+}
+
+function updateImageCounter() {
+    const currentNum = document.getElementById('currentImageNum');
+    const totalNum = document.getElementById('totalImageNum');
+    if (currentNum && totalNum) {
+        currentNum.textContent = currentModalImageIndex + 1;
+        totalNum.textContent = currentModalImages.length;
+    }
 }
 
 function handleTouchStart(e) {
