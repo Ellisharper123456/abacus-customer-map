@@ -835,6 +835,19 @@ function resetInstallationForm() {
     if (submitBtn) submitBtn.textContent = 'Add Installation';
 }
 
+function base64ToBlob(base64) {
+  const [header, data] = base64.split(',');
+  const mime = header.match(/:(.*?);/)[1];
+  const binary = atob(data);
+  const array = new Uint8Array(binary.length);
+
+  for (let i = 0; i < binary.length; i++) {
+    array[i] = binary.charCodeAt(i);
+  }
+
+  return new Blob([array], { type: mime });
+}
+
 async function prepareImagesForSave(installId) {
     if (!storage) {
         return [...currentImages];
@@ -847,13 +860,19 @@ async function prepareImagesForSave(installId) {
                 const response = await fetch(img);
                 const blob = await response.blob();
                 
-                const storageRef = storage.ref(storage, `installations/${installId}/image_${Date.now()}_${index}.jpg`);
-                const uploadTask = await storage.uploadBytes(storageRef, blob);
-                const downloadURL = await storage.getDownloadURL(uploadTask.ref);
+                const storageRef = storage.ref(`installations/${installId}/image_${Date.now()}_${index}.jpg`);
+                console.log('here')
+                console.log({blob: blob, storageRef: storageRef});
+                // Upload using compat syntax
+                const snapshot = await storageRef.put(blob);
+
+                // Get download URL
+                const downloadURL = await snapshot.ref.getDownloadURL();
+
                 return downloadURL;
             } catch (error) {
                 console.error('Error uploading image:', error);
-                return img; // Fallback to data URL if upload fails
+                return img;
             }
         }
         return img;
@@ -862,6 +881,35 @@ async function prepareImagesForSave(installId) {
     const results = await Promise.all(uploads);
     return results.filter(Boolean);
 }
+
+
+// async function prepareImagesForSave(installId) {
+//     if (!storage) {
+//         return [...currentImages];
+//     }
+
+//     const uploads = currentImages.map(async (img, index) => {
+//         if (typeof img === 'string' && img.startsWith('data:image')) {
+//             try {
+//                 // Convert data URL to blob
+//                 const response = await fetch(img);
+//                 const blob = await response.blob();
+                
+//                 const storageRef = storage.ref(storage, `installations/${installId}/image_${Date.now()}_${index}.jpg`);
+//                 const uploadTask = await storage.uploadBytes(storageRef, blob);
+//                 const downloadURL = await storage.getDownloadURL(uploadTask.ref);
+//                 return downloadURL;
+//             } catch (error) {
+//                 console.error('Error uploading image:', error);
+//                 return img; // Fallback to data URL if upload fails
+//             }
+//         }
+//         return img;
+//     });
+
+//     const results = await Promise.all(uploads);
+//     return results.filter(Boolean);
+// }
 
 function renderImagePreviewFromCurrentImages() {
     const previewContainer = document.getElementById('imagePreview');
@@ -1162,44 +1210,8 @@ function closeDetailModal() {
     document.getElementById('detailModal').classList.remove('active');
 }
 
-ImageIndex - 1 + currentModalImages.length) % currentModalImages.length;
-    const img = document.getElementById('imageModalImg');
-    if (img) {
-        img.style.opacity = '0.5';
-        img.src = currentModalImages[currentModalImageIndex];
-        img.style.opacity = '1';
-    }
-    updateImageCounter();
-}
 
-function showNextImage() {
-    if (!currentModalImages.length) return;
-    currentModalImageIndex = (currentModalImageIndex + 1) % currentModalImages.length;
-    const img = document.getElementById('imageModalImg');
-    if (img) {
-        img.style.opacity = '0.5';
-        img.src = currentModalImages[currentModalImageIndex];
-        img.style.opacity = '1';
-    }
-    updateImageCounter();
-}
-
-function handleTouchStart(e) {
-    touchStartX = e.changedTouches[0].screenX;
-}
-
-function handleTouchEnd(e) {
-    touchEndX = e.changedTouches[0].screenX;
-    handleSwipe();
-}
-
-function handleSwipe() {
-    const swipeThreshold = 50;
-    if (touchStartX - touchEndX > swipeThreshold) {
-        // Swiped left - show next image
-        showNextImage();
-    } else if (touchEndX - touchStartX > swipeThreshold) {
-        // Swiped right - show previous imlet touchStartX = 0;
+let touchStartX = 0;
 let touchEndX = 0;
 
 function openImageModal(installId, index) {
@@ -1218,9 +1230,6 @@ function openImageModal(installId, index) {
     // Add touch listeners for swipe
     modal.addEventListener('touchstart', handleTouchStart, false);
     modal.addEventListener('touchend', handleTouchEnd, false);
-    
-    // Prevent body scroll when modal is open
-    document.body.style.overflow = 'hidden';
 }
 
 function closeImageModal() {
@@ -1235,25 +1244,6 @@ function closeImageModal() {
     // Remove touch listeners
     modal.removeEventListener('touchstart', handleTouchStart);
     modal.removeEventListener('touchend', handleTouchEnd);
-    
-    // Re-enable body scroll
-    document.body.style.overflow = 'auto';
-}
-
-function showPrevImage() {
-    if (!currentModalImages.length) return;
-    currentModalImageIndex = (currentModalage
-        showPrevImage();
-    }
-}
-
-function updateImageCounter() {
-    const currentNum = document.getElementById('currentImageNum');
-    const totalNum = document.getElementById('totalImageNum');
-    if (currentNum && totalNum) {
-        currentNum.textContent = currentModalImageIndex + 1;
-        totalNum.textContent = currentModalImages.length;
-    }
 }
 
 function handleTouchStart(e) {
@@ -1284,29 +1274,6 @@ function updateImageCounter() {
         totalNum.textContent = currentModalImages.length;
     }
 }
-
-// function openImageModal(installId, index) {
-//     const modal = document.getElementById('imageModal');
-//     const img = document.getElementById('imageModalImg');
-//     if (!modal || !img) return;
-//     const installation = installations.find(i => String(i.id) === String(installId));
-//     if (!installation || !installation.images || installation.images.length === 0) return;
-
-//     currentModalImages = installation.images;
-//     currentModalImageIndex = Math.max(0, Math.min(index, currentModalImages.length - 1));
-//     img.src = currentModalImages[currentModalImageIndex];
-//     modal.classList.add('active');
-// }
-
-// function closeImageModal() {
-//     const modal = document.getElementById('imageModal');
-//     const img = document.getElementById('imageModalImg');
-//     if (!modal || !img) return;
-//     img.src = '';
-//     modal.classList.remove('active');
-//     currentModalImages = [];
-//     currentModalImageIndex = 0;
-// }
 
 function showPrevImage() {
     if (!currentModalImages.length) return;
